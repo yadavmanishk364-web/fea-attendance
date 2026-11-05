@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FEA Attendance Tracking System - Cloud Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0d9488 100%);
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --brand-primary: #4f46e5;
+      --brand-secondary: #06b6d4;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --font-main: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      font-family: var(--font-main);
+      color: var(--text-dark);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wrap { width: 100%; max-width: 680px; margin: 0 auto; }
+
+    /* LOGIN SCREEN */
+    #login-screen {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    #login-screen h2 { font-size: 22px; color: var(--brand-primary); margin-bottom: 8px; }
+    #login-screen p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+    /* HEADER */
+    header.fea-header {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+    .brand-container { display: flex; align-items: center; gap: 12px; }
+    .fea-monogram {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #ffffff, #e0e7ff);
+      border-radius: var(--radius-md);
+      display: grid; place-items: center;
+      color: var(--brand-primary); font-size: 20px; font-weight: 800;
+    }
+    .portal-title h1 { font-size: 19px; font-weight: 800; color: #ffffff; }
+    .portal-title p { font-size: 12px; color: #cbd5e1; font-weight: 500; }
+
+    /* NAVIGATION TABS */
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab-btn {
+      flex: 1; padding: 12px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+      color: #fff; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .tab-btn.active { background: #fff; color: var(--brand-primary); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+    /* CARDS */
+    .card { background: var(--card-bg); border-radius: var(--radius-lg); padding: 24px; box-shadow: 0 12px 36px rgba(0,0,0,0.25); margin-bottom: 20px; }
+    h2 { font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+    /* STATS GRID */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    .stat-box { border-radius: var(--radius-md); padding: 12px; text-align: center; }
+    .stat-box.green { background: #dcfce7; color: #166534; }
+    .stat-box.red { background: #fee2e2; color: #991b1b; }
+    .stat-box.purple { background: #e0e7ff; color: #3730a3; }
+    .stat-box b { display: block; font-size: 22px; font-weight: 800; }
+    .stat-box span { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+
+    /* STUDENT ITEM */
+    .student-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: var(--radius-md); margin-bottom: 10px;
+    }
+    .student-info strong { display: block; font-size: 15px; color: var(--text-dark); }
+    .student-info span { font-size: 12px; color: var(--text-muted); }
+    .mark-btns { display: flex; gap: 6px; align-items: center; }
+    .mark-btns button { padding: 8px 10px; border-radius: 8px; border: none; font-weight: 700; font-size: 12px; cursor: pointer; }
+
+    /* BUTTONS & FORMS */
+    .btn {
+      width: 100%; height: 48px; border: none; border-radius: var(--radius-md);
+      font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+    }
+    .btn-gradient { background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; box-shadow: 0 6px 20px rgba(79,70,229,0.35); }
+    .btn-good { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; box-shadow: 0 4px 15px rgba(16,185,129,0.3); }
+
+    .field { margin-bottom: 14px; text-align: left; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-dark); }
+    input { width: 100%; height: 46px; padding: 0 14px; border: 2px solid #e2e8f0; border-radius: var(--radius-md); font-family: inherit; font-size: 14px; background: #f8fafc; }
+    input:focus { outline: none; border-color: var(--brand-primary); background: #fff; }
+
+    footer { margin-top: auto; padding: 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+    footer strong { color: #38bdf8; }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+      <h2>🔐 FEA Cloud Portal Login</h2>
+      <p>Admin ya Teacher apne ID-Password se login karein</p>
+      
+      <form onsubmit="handleTeacherLogin(event)">
+        <div class="field">
+          <label>Email ID</label>
+          <input type="email" id="loginEmail" placeholder="admin@fea.org / teacher@fea.org" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="loginPass" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-gradient" style="margin-top:10px;">🚀 Secure Login</button>
+      </form>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="main-dashboard" style="display:none;">
+      <header class="fea-header">
+        <div class="brand-container">
+          <div class="fea-monogram">FEA</div>
+          <div class="portal-title">
+            <h1>FEA Attendance Tracking</h1>
+            <p id="logged-user-email">Cloud Portal Dashboard</p>
+          </div>
+        </div>
+        <button onclick="logoutTeacher()" style="background:#ef4444; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">Logout</button>
+      </header>
+
+      <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('today', this)">📝 Attendance</button>
+        <button class="tab-btn" onclick="switchTab('students', this)">👥 Add Student</button>
+        <button id="admin-tab-btn" class="tab-btn" onclick="switchTab('admin', this)" style="display:none;">👑 Admin Panel</button>
+      </div>
+
+      <!-- ATTENDANCE & SESSION DETAILS -->
+      <main id="tab-today" class="card">
+        <h2>📊 Attendance Overview</h2>
+        <div class="stats-grid">
+          <div class="stat-box green"><b id="count-present">0</b><span>PRESENT</span></div>
+          <div class="stat-box red"><b id="count-absent">0</b><span>ABSENT</span></div>
+          <div class="stat-box purple"><b id="count-total">0</b><span>TOTAL</span></div>
+        </div>
+
+        <!-- Session & Topic Customization for WhatsApp -->
+        <div style="background:#f1f5f9; padding:14px; border-radius:12px; margin-bottom:16px;">
+          <h3 style="font-size:15px; margin-bottom:10px; color:#1e293b;">📌 Session & Topic Details</h3>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div class="field" style="margin-bottom:8px;">
+              <label>Session No.</label>
+              <input type="text" id="msgSessionNo" placeholder="e.g. Session 12">
+            </div>
+            <div class="field" style="margin-bottom:8px;">
+              <label>Date</label>
+              <input type="date" id="msgDate">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Topic Name</label>
+            <input type="text" id="msgTopicName" placeholder="e.g. Advanced English Conversations">
+          </div>
+        </div>
+
+        <h2>👩‍🎓 Student List (Cloud Database)</h2>
+        <div id="studentContainer"></div>
+
+        <div style="margin-top: 16px;">
+          <button class="btn btn-gradient" onclick="sendWhatsAppReminders()">💬 Send Professional WhatsApp to Both Numbers (Student & Parent)</button>
+        </div>
+      </main>
+
+      <!-- STUDENTS MANAGEMENT -->
+      <section id="tab-students" class="card" style="display:none;">
+        <h2>👥 Add New Student & Dual Numbers</h2>
+        <form id="addStudentForm" onsubmit="handleStudentSubmit(event)">
+          <div class="field">
+            <label>Student Full Name</label>
+            <input type="text" id="sName" placeholder="Enter student full name" required>
+          </div>
+          <div class="field">
+            <label>Student WhatsApp Number</label>
+            <input type="tel" id="sPhone" placeholder="10 digit student mobile number" required>
+          </div>
+          <div class="field">
+            <label>Parent / Guardian WhatsApp Number</label>
+            <input type="tel" id="sParentPhone" placeholder="10 digit parent mobile number" required>
+          </div>
+          <div class="field">
+            <label>Batch Time / Name</label>
+            <input type="text" id="sBatch" placeholder="e.g. Batch 1 (10:00 AM)" required>
+          </div>
+          <button type="submit" class="btn btn-gradient" style="margin-top:10px;">➕ Save Student Record to Cloud</button>
+        </form>
+      </section>
+
+      <!-- ADMIN PANEL -->
+      <section id="tab-admin" class="card" style="display:none;">
+        <h2>👑 Master Admin Panel</h2>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">Yahan se aap naye teachers ke accounts create kar sakte hain:</p>
+        <form id="createTeacherForm" onsubmit="handleTeacherSubmit(event)">
+          <div class="field">
+            <label>Teacher Full Name</label>
+            <input type="text" id="tName" placeholder="e.g. Priya Sharma" required>
+          </div>
+          <div class="field">
+            <label>Teacher Email ID</label>
+            <input type="email" id="tEmail" placeholder="teacher@fea.org" required>
+          </div>
+          <div class="field">
+            <label>Assign Default Password</label>
+            <input type="password" id="tPass" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-good">✨ Create Teacher Account</button>
+        </form>
+      </section>
+    </div>
+
+    <footer>
+      Designed & Developed by <strong>Manish Yadav</strong><br>
+      Contact: <a href="tel:9155437755" style="color:#38bdf8; text-decoration:none; font-weight:700;">9155437755</a>
+    </footer>
+  </div>
+
+  <script>
+    const MASTER_ADMIN_EMAIL = "yadavmanishk364@gmail.com";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAUt5qJj2sTF8RrV0WHZXy2_pSjc2Wgyyc",
+      authDomain: "fea-attendance-tracking.firebaseapp.com",
+      projectId: "fea-attendance-tracking",
+      storageBucket: "fea-attendance-tracking.firebasestorage.app",
+      messagingSenderId: "717335600813",
+      appId: "1:717335600813:web:967204900200f3793af024",
+      measurementId: "G-W5WYXHEB47"
+    };
+
+    let db = null;
+    let auth = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+      }
+    } catch(err) { console.log(err); }
+
+    if (auth) {
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('main-dashboard').style.display = 'block';
+          
+          if (user.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+            document.getElementById('logged-user-email').innerText = "Role: Master Admin (" + user.email + ")";
+            document.getElementById('admin-tab-btn').style.display = 'block';
+          } else {
+            document.getElementById('logged-user-email').innerText = "Role: Teacher (" + user.email + ")";
+            document.getElementById('admin-tab-btn').style.display = 'none';
+          }
+          fetchStudentsFromCloud();
+        } else {
+          document.getElementById('login-screen').style.display = 'block';
+          document.getElementById('main-dashboard').style.display = 'none';
+        }
+      });
+    }
+
+    window.handleTeacherLogin = function(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const pass = document.getElementById('loginPass').value;
+      if (auth) {
+        auth.signInWithEmailAndPassword(email, pass).catch((err) => alert('Login Failed: ' + err.message));
+      }
+    };
+
+    window.logoutTeacher = function() {
+      if (auth) auth.signOut();
+    };
+
+    let students = [];
+
+    // Fetch Students from Firebase Firestore Cloud Database
+    function fetchStudentsFromCloud() {
+      if (!db) return;
+      db.collection("students").onSnapshot((snapshot) => {
+        students = [];
+        snapshot.forEach((doc) => {
+          students.push({ id: doc.id, ...doc.data() });
+        });
+        renderStudents();
+      }, (error) => {
+        console.log("Error fetching students: ", error);
+      });
+    }
+
+    function renderStudents() {
+      const container = document.getElementById('studentContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      let presentCount = 0, absentCount = 0;
+
+      if(students.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:20px;">Cloud database me koi student nahi hai. "Add Student" tab me jaakar add karein.</p>`;
+      }
+
+      students.forEach((st, index) => {
+        if(st.status === 'present') presentCount++;
+        if(st.status === 'absent') absentCount++;
+
+        const item = document.createElement('div');
+        item.className = 'student-item';
+        item.innerHTML = `
+          <div class="student-info">
+            <strong>${st.name}</strong>
+            <span>${st.batch} • Student: ${st.phone} | Parent: ${st.parentPhone || 'N/A'}</span>
+          </div>
+          <div class="mark-btns">
+            <button type="button" style="background:${st.status === 'present' ? '#10b981' : '#dcfce7'}; color:${st.status === 'present' ? '#fff' : '#15803d'};" onclick="updateAttendance('${st.id}', 'present')">Present</button>
+            <button type="button" style="background:${st.status === 'absent' ? '#ef4444' : '#fee2e2'}; color:${st.status === 'absent' ? '#fff' : '#b91c1c'};" onclick="updateAttendance('${st.id}', 'absent')">Absent</button>
+            <button type="button" style="background:#f1f5f9; color:#64748b;" onclick="deleteStudent('${st.id}')" title="Delete Student">❌</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      document.getElementById('count-present').innerText = presentCount;
+      document.getElementById('count-absent').innerText = absentCount;
+      document.getElementById('count-total').innerText = students.length;
+    }
+
+    window.updateAttendance = function(docId, status) {
+      if (!db) return;
+      db.collection("students").doc(docId).update({ status: status })
+        .catch((err) => alert("Error updating attendance: " + err.message));
+    };
+
+    window.deleteStudent = function(docId) {
+      if(confirm("Kya aap is student ko cloud database se hatana chahte hain?")) {
+        if (!db) return;
+        db.collection("students").doc(docId).delete()
+          .catch((err) => alert("Error deleting student: " + err.message));
+      }
+    };
+
+    window.handleStudentSubmit = function(e) {
+      e.preventDefault();
+      const name = document.getElementById('sName').value;
+      const phone = document.getElementById('sPhone').value;
+      const parentPhone = document.getElementById('sParentPhone').value;
+      const batch = document.getElementById('sBatch').value;
+      
+      if (!db) return;
+      db.collection("students").add({
+        name: name,
+        phone: phone,
+        parentPhone: parentPhone,
+        batch: batch,
+        status: 'none',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then(() => {
+        alert('Student successfully saved to Cloud Database!');
+        document.getElementById('addStudentForm').reset();
+        switchTab('today', document.querySelectorAll('.tab-btn')[0]);
+      })
+      .catch((error) => {
+        alert("Error adding student: " + error.message);
+      });
+    };
+
+    window.handleTeacherSubmit = function(e) {
+      e.preventDefault();
+      const tName = document.getElementById('tName').value;
+      const tEmail = document.getElementById('tEmail').value;
+      const tPass = document.getElementById('tPass').value;
+      if (auth) {
+        auth.createUserWithEmailAndPassword(tEmail, tPass)
+          .then(() => { alert(`Teacher Account created successfully for ${tName}!`); document.getElementById('createTeacherForm').reset(); })
+          .catch((error) => alert("Error: " + error.message));
+      }
+    };
+
+    window.sendWhatsAppReminders = function() {
+      const absentStudents = students.filter(s => s.status === 'absent');
+      if(absentStudents.length === 0) {
+        alert('Koi absent student nahi hai!');
+        return;
+      }
+      
+      const sessionNo = document.getElementById('msgSessionNo').value || "Today's Session";
+      const dateVal = document.getElementById('msgDate').value || new Date().toLocaleDateString();
+      const topicName = document.getElementById('msgTopicName').value || "General English & Communication";
+
+      let delayIndex = 0;
+      absentStudents.forEach((st) => {
+        const msgText = `Dear Student/Parent,\n\nFEA Attendance Update: Aaj ${sessionNo} (${dateVal}) me topic "${topicName}" padhaya gaya.\n\n${st.name} ne aaj ki class miss ki hai. English fluency aur skills improve karne ke liye regular class attend karna bahut zaroori hai.\n\nKripya agli class time par attend karein.\n\nRegards,\nFEA Attendance Desk`;
+        const encodedMsg = encodeURIComponent(msgText);
+
+        if (st.phone) {
+          setTimeout(() => {
+            window.open(`https://wa.me/91${st.phone}?text=${encodedMsg}`, '_blank');
+          }, delayIndex * 500);
+          delayIndex++;
+        }
+
+        if (st.parentPhone) {
+          setTimeout(() => {
+            window.open(`https://wa.me/91${st.parentPhone}?text=${encodedMsg}`, '_blank');
+          }, delayIndex * 500);
+          delayIndex++;
+        }
+      });
+    };
+
+    window.switchTab = function(tabId, el) {
+      document.getElementById('tab-today').style.display = tabId === 'today' ? 'block' : 'none';
+      document.getElementById('tab-students').style.display = tabId === 'students' ? 'block' : 'none';
+      const adminSec = document.getElementById('tab-admin');
+      if(adminSec) adminSec.style.display = tabId === 'admin' ? 'block' : 'none';
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      if (el) el.classList.add('active');
+    };
+  </script>
+</body>
+</html>
